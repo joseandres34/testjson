@@ -73,7 +73,7 @@ def convert():
         flash(f'Error: {str(e)}')
         return redirect(request.url)
 
-@app.route('/download/<filename>', methods=['POST'])
+@app.route('/download/<filename>', methods=['GET', 'POST'])
 def download(filename):
     try:
         return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)

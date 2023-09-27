@@ -1,16 +1,16 @@
 import os
-from flask import Flask, render_template, request, flash, redirect, send_file, url_for
+from flask import Flask, render_template, request, send_from_directory, flash, redirect
 from werkzeug.utils import secure_filename
+from io import StringIO
 import json
 import csv
-from io import StringIO
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'json'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.secret_key = 'supersecretkey'
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -47,16 +47,23 @@ def convert():
             return redirect(request.url)
 
         if file and allowed_file(file.filename):
-            # Generar un nombre único para el archivo CSV
-            csv_filename = secure_filename('output.csv')
+            json_data = file.read().decode('utf-8')
+
+            if not json_data.strip():
+                flash('El archivo JSON está vacío.')
+                return redirect(request.url)
+
+            csv_data = json_to_csv(json_data)
+
+            # Guarda el archivo CSV temporalmente
+            csv_filename = 'output.csv'
             csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
 
-            # Inicia el proceso de procesamiento en bloques
-            process_json_and_generate_csv(file, csv_path)
+            with open(csv_path, 'w', newline='', encoding='utf-8') as csv_file:
+                csv_file.write(csv_data)
 
-            flash('Procesamiento en curso. El archivo CSV estará disponible para descarga en breve.')
-            return redirect(url_for('index'))  # Redirige a la página principal después del procesamiento
-
+            # Envia el archivo para descarga
+            return send_from_directory(app.config['UPLOAD_FOLDER'], csv_filename, as_attachment=True)
         else:
             flash('El archivo seleccionado no es un archivo JSON válido.')
             return redirect(request.url)
@@ -64,14 +71,6 @@ def convert():
     except Exception as e:
         flash(f'Error: {str(e)}')
         return redirect(request.url)
-
-@app.route('/download/<filename>', methods=['GET', 'POST'])
-def download(filename):
-    try:
-        return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)
-    except Exception as e:
-        flash(f'Error al descargar el archivo: {str(e)}')
-        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

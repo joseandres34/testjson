@@ -81,5 +81,13 @@ def download(filename):
         flash(f'Error al descargar el archivo: {str(e)}')
         return redirect(url_for('index'))
 
+# Configuraciones adicionales para manejar solicitudes CORS
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    return response
+
 if __name__ == '__main__':
     app.run(debug=True)

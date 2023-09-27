@@ -1,8 +1,8 @@
 from celery import Celery
 from app import json_to_csv
 
-app = Celery('tasks', broker='pyamqp://guest:guest@localhost//')
+celery = Celery('tasks', broker=os.environ.get('CLOUDAMQP_URL', 'pyamqp://guest:guest@localhost//'))
 
-@app.task
+@celery.task
 def process_json(json_data, csv_path):
     json_to_csv(json_data, csv_path)

@@ -34,7 +34,6 @@ def json_to_csv(json_data):
 def index():
     return render_template('index.html')
 
-
 @app.route('/convert', methods=['GET', 'POST'])
 def convert():
     if request.method == 'POST':
@@ -71,9 +70,8 @@ def convert():
             flash(f'Error: {str(e)}')
             return redirect(request.url)
 
-    # Si se recibe una solicitud GET, simplemente renderiza la página principal.
+    # Si la solicitud es GET, simplemente renderiza la página principal.
     return render_template('index.html')
 
-
-
-
+if __name__ == '__main__':
+    app.run(debug=True)

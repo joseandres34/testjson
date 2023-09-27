@@ -8,10 +8,10 @@ from io import StringIO
 
 app = Flask(__name__)
 
-# Configuración de subida de archivos
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'json'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.secret_key = 'supersecretkey'  # Cambia esto a una clave secreta más segura en un entorno de producción
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -20,16 +20,14 @@ def json_to_csv(json_data):
     data = json.loads(json_data)
     csv_data = StringIO()
     csv_writer = csv.writer(csv_data)
-    
-    # Escribir el encabezado
+
     if data:
         header = data[0].keys()
         csv_writer.writerow(header)
-        
-        # Escribir los datos
+
         for row in data:
             csv_writer.writerow(row.values())
-    
+
     return csv_data.getvalue()
 
 @app.route('/')
@@ -41,13 +39,13 @@ def convert():
     if 'json_file' not in request.files:
         flash('No se seleccionó un archivo JSON.')
         return redirect(request.url)
-    
+
     file = request.files['json_file']
-    
+
     if file.filename == '':
         flash('No se seleccionó un archivo.')
         return redirect(request.url)
-    
+
     if file and allowed_file(file.filename):
         try:
             json_data = file.read().decode('utf-8')
@@ -66,5 +64,4 @@ def convert():
         return redirect(request.url)
 
 if __name__ == '__main__':
-    app.secret_key = 'supersecretkey'  # Cambia esto a una clave secreta más segura en un entorno de producción
     app.run(debug=True)

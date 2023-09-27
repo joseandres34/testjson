@@ -29,14 +29,6 @@ def json_to_csv(json_data):
 
     return csv_data.getvalue()
 
-def process_json_and_generate_csv(json_file, csv_path):
-    with open(json_file, 'r', encoding='utf-8') as f_json, open(csv_path, 'w', newline='', encoding='utf-8') as f_csv:
-        # Lee el archivo JSON en bloques de líneas
-        for line in f_json:
-            json_data = json.loads(line)
-            csv_data = json_to_csv(json.dumps(json_data))  # Vuelve a convertir a JSON y luego a CSV
-            f_csv.write(csv_data)
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -80,14 +72,6 @@ def download(filename):
     except Exception as e:
         flash(f'Error al descargar el archivo: {str(e)}')
         return redirect(url_for('index'))
-
-# Configuraciones adicionales para manejar solicitudes CORS
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    return response
 
 if __name__ == '__main__':
     app.run(debug=True)

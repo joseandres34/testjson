@@ -33,7 +33,7 @@ def json_to_csv(json_data):
 @app.route('/')
 def index():
     return render_template('index.html')
-
+    
 @app.route('/convert', methods=['GET', 'POST'])
 def convert():
     if request.method == 'POST':
@@ -56,11 +56,20 @@ def convert():
                     return redirect(request.url)
 
                 csv_data = json_to_csv(json_data)
+
+                # Guarda el archivo CSV temporalmente
+                csv_filename = 'output.csv'
+                csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
+
+                with open(csv_path, 'w', newline='', encoding='utf-8') as csv_file:
+                    csv_file.write(csv_data)
+
+                # Envia el archivo para descarga
                 return send_file(
-                    StringIO(csv_data),
+                    csv_path,
                     mimetype='text/csv',
                     as_attachment=True,
-                    download_name='output.csv'
+                    download_name=csv_filename
                 )
             else:
                 flash('El archivo seleccionado no es un archivo JSON válido.')

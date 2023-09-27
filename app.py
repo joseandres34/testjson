@@ -1,8 +1,9 @@
 import os
-from flask import Flask, render_template, request, send_from_directory, flash, redirect
+from flask import Flask, render_template, request, flash, redirect
 from werkzeug.utils import secure_filename
 from io import StringIO
 import json
+from worker import process_json
 import csv
 
 app = Flask(__name__)
@@ -25,17 +26,18 @@ def flatten_json(json_obj, parent_key='', sep='_'):
             flat_dict[new_key] = v
     return flat_dict
 
-def json_to_csv(json_data):
+def json_to_csv(json_data, csv_path):
     data = json.loads(json_data)
     flattened_data = [flatten_json(record) for record in data]
-    
+
     csv_data = StringIO()
     csv_writer = csv.DictWriter(csv_data, fieldnames=flattened_data[0].keys())
 
     csv_writer.writeheader()
     csv_writer.writerows(flattened_data)
 
-    return csv_data.getvalue()
+    with open(csv_path, 'w', newline='', encoding='utf-8') as csv_file:
+        csv_file.write(csv_data.getvalue())
 
 @app.route('/')
 def index():
@@ -61,17 +63,15 @@ def convert():
                 flash('El archivo JSON está vacío.')
                 return redirect(request.url)
 
-            csv_data = json_to_csv(json_data)
-
-            # Guarda el archivo CSV temporalmente
-            csv_filename = 'output.csv'
+            # Generar un nombre único para el archivo CSV
+            csv_filename = secure_filename('output.csv')
             csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
 
-            with open(csv_path, 'w', newline='', encoding='utf-8') as csv_file:
-                csv_file.write(csv_data)
+            # Envia la tarea al worker
+            process_json.delay(json_data, csv_path)
 
-            # Envia el archivo para descarga
-            return send_from_directory(app.config['UPLOAD_FOLDER'], csv_filename, as_attachment=True)
+            flash('Procesamiento en curso. El archivo CSV estará disponible para descarga en breve.')
+            return redirect(request.url)
         else:
             flash('El archivo seleccionado no es un archivo JSON válido.')
             return redirect(request.url)

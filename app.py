@@ -15,17 +15,25 @@ app.secret_key = 'supersecretkey'
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def flatten_json(json_obj, parent_key='', sep='_'):
+    flat_dict = {}
+    for k, v in json_obj.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            flat_dict.update(flatten_json(v, new_key, sep=sep))
+        else:
+            flat_dict[new_key] = v
+    return flat_dict
+
 def json_to_csv(json_data):
     data = json.loads(json_data)
+    flattened_data = [flatten_json(record) for record in data]
+    
     csv_data = StringIO()
-    csv_writer = csv.writer(csv_data)
+    csv_writer = csv.DictWriter(csv_data, fieldnames=flattened_data[0].keys())
 
-    if data:
-        header = data[0].keys()
-        csv_writer.writerow(header)
-
-        for row in data:
-            csv_writer.writerow(row.values())
+    csv_writer.writeheader()
+    csv_writer.writerows(flattened_data)
 
     return csv_data.getvalue()
 

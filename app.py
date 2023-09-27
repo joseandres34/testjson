@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, flash, redirect, send_file
+from flask import Flask, render_template, request, flash, redirect, send_file, url_for
 from werkzeug.utils import secure_filename
 import json
 import csv
@@ -73,7 +73,7 @@ def convert():
         flash(f'Error: {str(e)}')
         return redirect(request.url)
 
-@app.route('/download/<filename>')
+@app.route('/download/<filename>', methods=['POST'])
 def download(filename):
     try:
         return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)

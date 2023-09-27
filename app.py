@@ -34,34 +34,49 @@ def json_to_csv(json_data):
 def index():
     return render_template('index.html')
 
-@app.route('/convert', methods=['POST'])
+
+@app.route('/convert', methods=['GET', 'POST'])
 def convert():
-    if 'json_file' not in request.files:
-        flash('No se seleccionó un archivo JSON.')
-        return redirect(request.url)
-
-    file = request.files['json_file']
-
-    if file.filename == '':
-        flash('No se seleccionó un archivo.')
-        return redirect(request.url)
-
-    if file and allowed_file(file.filename):
+    if request.method == 'POST':
         try:
-            json_data = file.read().decode('utf-8')
-            csv_data = json_to_csv(json_data)
-            return send_file(
-                StringIO(csv_data),
-                mimetype='text/csv',
-                as_attachment=True,
-                download_name='output.csv'
-            )
-        except Exception as e:
-            flash(f'Error al procesar el archivo JSON: {str(e)}')
-            return redirect(request.url)
-    else:
-        flash('El archivo seleccionado no es un archivo JSON válido.')
-        return redirect(request.url)
+            if 'json_file' not in request.files:
+                flash('No se seleccionó un archivo JSON.')
+                return redirect(request.url)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+            file = request.files['json_file']
+
+            if file.filename == '':
+                flash('No se seleccionó un archivo.')
+                return redirect(request.url)
+
+            if file and allowed_file(file.filename):
+                json_data = file.read().decode('utf-8')
+
+                if not json_data.strip():
+                    flash('El archivo JSON está vacío.')
+                    return redirect(request.url)
+
+                csv_data = json_to_csv(json_data)
+                return send_file(
+                    StringIO(csv_data),
+                    mimetype='text/csv',
+                    as_attachment=True,
+                    download_name='output.csv'
+                )
+            else:
+                flash('El archivo seleccionado no es un archivo JSON válido.')
+                return redirect(request.url)
+
+        except Exception as e:
+            flash(f'Error: {str(e)}')
+            return redirect(request.url)
+
+    # Si se recibe una solicitud GET, simplemente renderiza la página principal.
+    return render_template('index.html')
+
+
+
+
+
+
+

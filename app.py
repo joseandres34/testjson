@@ -41,37 +41,41 @@ def process_json_and_generate_csv(json_file, csv_path):
 def index():
     return render_template('index.html')
 
-@app.route('/convert', methods=['POST'])
+@app.route('/convert', methods=['GET', 'POST'])
 def convert():
-    try:
-        if 'json_file' not in request.files:
-            flash('No se seleccionó un archivo JSON.')
+    if request.method == 'POST':
+        try:
+            if 'json_file' not in request.files:
+                flash('No se seleccionó un archivo JSON.')
+                return redirect(request.url)
+
+            file = request.files['json_file']
+
+            if file.filename == '':
+                flash('No se seleccionó un archivo.')
+                return redirect(request.url)
+
+            if file and allowed_file(file.filename):
+                # Generar un nombre único para el archivo CSV
+                csv_filename = secure_filename('output.csv')
+                csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
+
+                # Inicia el proceso de procesamiento en bloques
+                process_json_and_generate_csv(file, csv_path)
+
+                flash('Procesamiento en curso. El archivo CSV estará disponible para descarga en breve.')
+                return redirect(request.url)
+
+            else:
+                flash('El archivo seleccionado no es un archivo JSON válido.')
+                return redirect(request.url)
+
+        except Exception as e:
+            flash(f'Error: {str(e)}')
             return redirect(request.url)
 
-        file = request.files['json_file']
-
-        if file.filename == '':
-            flash('No se seleccionó un archivo.')
-            return redirect(request.url)
-
-        if file and allowed_file(file.filename):
-            # Generar un nombre único para el archivo CSV
-            csv_filename = secure_filename('output.csv')
-            csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
-
-            # Inicia el proceso de procesamiento en bloques
-            process_json_and_generate_csv(file, csv_path)
-
-            flash('Procesamiento en curso. El archivo CSV estará disponible para descarga en breve.')
-            return redirect(request.url)
-
-        else:
-            flash('El archivo seleccionado no es un archivo JSON válido.')
-            return redirect(request.url)
-
-    except Exception as e:
-        flash(f'Error: {str(e)}')
-        return redirect(request.url)
+    # Si la solicitud es GET, simplemente renderiza la página principal.
+    return render_template('index.html')
 
 @app.route('/download/<filename>')
 def download(filename):

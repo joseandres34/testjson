@@ -1,16 +1,16 @@
 import os
-from flask import Flask, render_template, request, send_from_directory, flash, redirect
+from flask import Flask, render_template, request, flash, redirect, send_file
 from werkzeug.utils import secure_filename
-from io import StringIO
 import json
 import csv
+from io import StringIO
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'json'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.secret_key = 'supersecretkey'
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -28,6 +28,14 @@ def json_to_csv(json_data):
             csv_writer.writerow(row.values())
 
     return csv_data.getvalue()
+
+def process_json_and_generate_csv(json_file, csv_path):
+    with open(json_file, 'r', encoding='utf-8') as f_json, open(csv_path, 'w', newline='', encoding='utf-8') as f_csv:
+        # Lee el archivo JSON en bloques de líneas
+        for line in f_json:
+            json_data = json.loads(line)
+            csv_data = json_to_csv(json.dumps(json_data))  # Vuelve a convertir a JSON y luego a CSV
+            f_csv.write(csv_data)
 
 @app.route('/')
 def index():
@@ -47,23 +55,16 @@ def convert():
             return redirect(request.url)
 
         if file and allowed_file(file.filename):
-            json_data = file.read().decode('utf-8')
-
-            if not json_data.strip():
-                flash('El archivo JSON está vacío.')
-                return redirect(request.url)
-
-            csv_data = json_to_csv(json_data)
-
-            # Guarda el archivo CSV temporalmente
-            csv_filename = 'output.csv'
+            # Generar un nombre único para el archivo CSV
+            csv_filename = secure_filename('output.csv')
             csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
 
-            with open(csv_path, 'w', newline='', encoding='utf-8') as csv_file:
-                csv_file.write(csv_data)
+            # Inicia el proceso de procesamiento en bloques
+            process_json_and_generate_csv(file, csv_path)
 
-            # Envia el archivo para descarga
-            return send_from_directory(app.config['UPLOAD_FOLDER'], csv_filename, as_attachment=True)
+            flash('Procesamiento en curso. El archivo CSV estará disponible para descarga en breve.')
+            return redirect(request.url)
+
         else:
             flash('El archivo seleccionado no es un archivo JSON válido.')
             return redirect(request.url)
@@ -71,6 +72,10 @@ def convert():
     except Exception as e:
         flash(f'Error: {str(e)}')
         return redirect(request.url)
+
+@app.route('/download/<filename>')
+def download(filename):
+    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)

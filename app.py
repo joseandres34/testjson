@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, flash, redirect
 from werkzeug.utils import secure_filename
 from io import StringIO
 import json
+from celery import Celery
 from worker import process_json
 import csv
 
@@ -12,6 +13,15 @@ UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'json'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = 'supersecretkey'
+
+app.config['CELERY_BROKER_URL'] = os.environ.get('CLOUDAMQP_URL', 'pyamqp://guest:guest@localhost//')
+app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CLOUDAMQP_URL', 'rpc://')
+
+celery = Celery(
+    app.import_name,
+    backend=app.config['CELERY_RESULT_BACKEND'],
+    broker=app.config['CELERY_BROKER_URL']
+)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -67,7 +77,7 @@ def convert():
             csv_filename = secure_filename('output.csv')
             csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
 
-            # Envia la tarea al worker
+            # Enviar la tarea al worker
             process_json.delay(json_data, csv_path)
 
             flash('Procesamiento en curso. El archivo CSV estará disponible para descarga en breve.')
